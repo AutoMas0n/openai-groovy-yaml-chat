@@ -1,5 +1,4 @@
 # public openai-chat repo
-- [Jbang](#jbang)
 
 # Single Codespace startup command
 ```bash
