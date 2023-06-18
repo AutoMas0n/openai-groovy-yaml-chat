@@ -56,7 +56,7 @@ class OpenAIChat {
                 } else if (consoleInput.contains("4c")) {
                     systemRoleInitContent = 'Act as a master programmer, respond in code for specified language only.'
                 } else {
-                    systemRoleInitContent = "Answer as concisely as possible whilst maintaining precision. Do not summarize your responses. Say 'sry' instead of apologizing + continue with response"
+                    systemRoleInitContent = "Answer concisely, precisely, no summaries. Say '' or 'sry' for apologies and proceed."
                 }
                 int modelChoice = arrayIndexSelected != 4 ? 1 : 0
                 int max_tokenChoice = arrayIndexSelected != 4 ? 3200 : 7200
