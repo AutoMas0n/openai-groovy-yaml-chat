@@ -18,5 +18,5 @@ curl -Ls https://sh.jbang.dev | bash -s - app setup && jbang jbang_main_v2_JAVA1
 
 ## Shortcut
 ```bash
-git clone https://github.com/automationStati0n/openai-groovy-yaml-chat && cd openai-groovy-yaml-chat && jbang https://gist.github.com/automationStati0n/d8d28cfb7a68592c79fd052419597e04 openai-chat-yaml.groovy $token
+curl -Ls https://sh.jbang.dev | bash -s - app setup && git clone https://github.com/automationStati0n/openai-groovy-yaml-chat && cd openai-groovy-yaml-chat && jbang https://gist.github.com/automationStati0n/d8d28cfb7a68592c79fd052419597e04 openai-chat-yaml.groovy $token
 ```
