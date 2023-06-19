@@ -1,2 +1,5 @@
 .vscode/
 key
+build/
+dist/
+*.spec
