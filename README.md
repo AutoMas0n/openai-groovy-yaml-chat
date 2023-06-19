@@ -2,8 +2,7 @@
 
 # Single Codespace startup command
 ```bash
-export token='myOpenAIToken'
-curl -Ls https://sh.jbang.dev | bash -s - app setup && source ~/.bashrc && git clone https://github.com/automationStati0n/openai-groovy-yaml-chat && cd openai-groovy-yaml-chat && jbang jbang_main_v2_JAVA11.java openai-chat-yaml.groovy $token
+export token='myOpenAIToken' && curl -Ls https://sh.jbang.dev | bash -s - app setup && source ~/.bashrc && git clone https://github.com/automationStati0n/openai-groovy-yaml-chat && cd openai-groovy-yaml-chat && jbang jbang_main_v2_JAVA11.java openai-chat-yaml.groovy $token
 ```
 
 # Jbang & codespaces
