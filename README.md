@@ -1,4 +1,8 @@
 # public openai-chat repo
+This is an experimental groovy/file based chat client with openai api meant for use with visual studio live code share.  
+*Live streaming of responses is not supported*
+
+## (This Repo is a work in progress)
 
 # Single Codespace startup command
 ```bash
