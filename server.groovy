@@ -36,7 +36,7 @@ import java.util.concurrent.CountDownLatch
         }
         request.setDoOutput(true)
         request.setRequestMethod(reqMethod)
-        request.setRequestProperty('Authorization', "Bearer ${args[0]}")
+        request.setRequestProperty('Authorization', "Bearer ${args[1]}")
         request.setRequestProperty('Content-Type', 'application/json')
         if(!message.isEmpty())
             request.getOutputStream().write(message.getBytes("UTF-8"))
@@ -59,7 +59,7 @@ import java.util.concurrent.CountDownLatch
         return response
     }
 
-int port = 9001
+int port = args[0].toInteger()
 HttpServer server = HttpServer.create(new InetSocketAddress(port), 0)
 server.createContext('/sendRequest', { HttpExchange exchange ->
     def input = exchange.getRequestBody().getText()

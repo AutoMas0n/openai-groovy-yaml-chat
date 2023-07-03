@@ -22,10 +22,10 @@ import java.nio.file.*
 import java.text.SimpleDateFormat
 
 class OpenAIChat {
+    String[] args
     File userInputFile = new File('input.txt')
     File convYamlFile = new File('input.yaml')
     File outputFile = new File('output.md')
-    String token
     String url = 'https://api.openai.com/v1/chat/completions'
     String[] modelList = ["gpt-4", "gpt-3.5-turbo", "gpt-3.5-turbo-16k"]
     String systemRoleInitContent = ''
@@ -34,7 +34,11 @@ class OpenAIChat {
     List<Map<String, String>> lastConversation = null
 
     static void main(String[] args) {
-        new OpenAIChat().startListener()
+        new OpenAIChat(args).startListener()
+    }
+
+    OpenAIChat(String[] args) {
+        this.args = args
     }
 
     void startListener() {
@@ -161,7 +165,7 @@ class OpenAIChat {
     }
 
     def invokeSendRequest(String reqMethod, String URL, String message, boolean failOnError, boolean useProxy) {
-        def serverUrl = 'http://localhost:9001/sendRequest'
+        String serverUrl = "http://localhost:${args[0]}/sendRequest"
         def connection = new URL(serverUrl).openConnection()
         connection.setRequestMethod('POST')
         connection.setDoOutput(true)
