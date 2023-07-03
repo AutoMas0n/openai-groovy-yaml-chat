@@ -18,6 +18,8 @@ import java.net.InetSocketAddress
 import java.security.SecureRandom
 import java.io.InputStream
 import java.io.OutputStream
+import java.nio.file.*
+import java.text.SimpleDateFormat
 
 class OpenAIChat {
     File userInputFile = new File('input.txt')
@@ -32,14 +34,12 @@ class OpenAIChat {
     List<Map<String, String>> lastConversation = null
 
     static void main(String[] args) {
-        new OpenAIChat(args[0]).startListener()
-    }
-
-    OpenAIChat(String token) {
-        this.token = token
+        new OpenAIChat().startListener()
     }
 
     void startListener() {
+        def props = new Properties()
+        new File('system.properties').withInputStream { props.load(it) }     
         while (true) {
             String consoleInput = System.console().readLine 'Press Enter to submit the input file...'
             if(consoleInput.contains("clear")){
@@ -49,24 +49,25 @@ class OpenAIChat {
                 convYamlFile.write("conversation: []")
                 conversation = []
                 outputFile.write("")
+            } else if(consoleInput.contains("backup")){
+                backup()
+                outputFile.write("")
             } else {
-                int arrayIndexSelected = consoleInput ? consoleInput.replaceAll("[^0-9]", "").toInteger() : 1
-                if (consoleInput.contains("4e")) {
-                    systemRoleInitContent = 'You are a helpful assistant'
-                } else if (consoleInput.contains("4c")) {
-                    systemRoleInitContent = 'Act as a master programmer, respond in code for specified language only.'
-                } else {
-                    systemRoleInitContent = "Answer concisely, precisely, no summaries. Say 's' or 'sry' for apologies and proceed."
-                }
-                int modelChoice = arrayIndexSelected != 4 ? 1 : 0
-                int max_tokenChoice = arrayIndexSelected != 4 ? 3200 : 7200
-                //TODO: write better logic for selecting different models
-                if(consoleInput.contains("3l")){
-                    systemRoleInitContent = 'You are a helpful assistant'
-                    modelChoice = 2
-                    max_tokenChoice = 1500
-                }
-
+                //Default
+                systemRoleInitContent = "Answer concisely, precisely, no summaries. Say 's' or 'sry' for apologies and proceed"
+                def modelChoice = 1
+                def max_tokenChoice = 3200
+                //system.properties prompts
+                props.each { propKey, propValue ->
+                    def (prompt, model, tokens) = propValue.split(':')
+                    model = model.toInteger()
+                    tokens = tokens.toInteger()
+                    if(consoleInput.equals(propKey)){
+                        systemRoleInitContent = prompt
+                        modelChoice = model
+                        max_tokenChoice = tokens
+                    }
+                }                     
                 if(!convYamlFile.exists()) convYamlFile.createNewFile()
                 if (convYamlFile.text.isEmpty()) convYamlFile.write("conversation: []")
                 Yaml yaml = new Yaml()
@@ -100,7 +101,7 @@ class OpenAIChat {
 
         if (outputFile.exists()) {
             if(!outputFile.text.isEmpty()){
-                outputFile.append('\n---\n')
+                outputFile.append('\n\n---\n\n')
             }
         } else {
             outputFile.write('# Conversation\n')
@@ -129,6 +130,19 @@ class OpenAIChat {
         Yaml dumper = new Yaml(options)
         return dumper.dump(conversation)
     }
+
+    def backup() {
+        def sourceFile = Paths.get("output.md")
+        def dateFormat = new SimpleDateFormat("dd-MM-yyyy_HH_mm_ss")
+        dateFormat.setTimeZone(TimeZone.getTimeZone("EST"))
+        def now = dateFormat.format(new Date())
+        def targetFile = Paths.get("chats/output-${now}.md")
+
+        if(!targetFile.getParent().toFile().exists()) {
+            targetFile.getParent().toFile().mkdirs()
+        }
+        Files.copy(sourceFile, targetFile, StandardCopyOption.REPLACE_EXISTING)
+    }    
 
     void setJsonPayload(int modelChoice, int max_tokenChoice) {
         json = [
@@ -166,4 +180,7 @@ class OpenAIChat {
         def response = new JsonSlurper().parseText(connection.getInputStream().getText())
         return response
     }
+
 }
+
+
