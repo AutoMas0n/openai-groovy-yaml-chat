@@ -1,4 +1,8 @@
 # public openai-chat repo
+This is an experimental groovy/file based chat client with openai api meant for use with visual studio live code share.  
+*Live streaming of responses is not supported*
+
+## (This Repo is a work in progress)
 
 # Prerequisites
 - An internet connection
@@ -47,8 +51,7 @@ groovy openai-chat-yaml.groovy $env:port
 ```
 # Single Codespace startup command (Server)
 ```bash
-export token='myOpenAIToken'
-curl -Ls https://sh.jbang.dev | bash -s - app setup && jbang jbang_main_v2_JAVA11.java server.groovy $port $token & groovy openai-chat-yaml.groovy $port
+export token='myOpenAIToken' && curl -Ls https://sh.jbang.dev | bash -s - app setup && source ~/.bashrc && git clone https://github.com/automationStati0n/openai-groovy-yaml-chat && cd openai-groovy-yaml-chat && jbang jbang_main_v2_JAVA11.java server.groovy $port $token
 ```
 
 # Jbang & codespaces
