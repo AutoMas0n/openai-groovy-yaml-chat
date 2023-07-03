@@ -18,12 +18,14 @@ import java.net.InetSocketAddress
 import java.security.SecureRandom
 import java.io.InputStream
 import java.io.OutputStream
+import java.nio.file.*
+import java.text.SimpleDateFormat
 
 class OpenAIChat {
+    String[] args
     File userInputFile = new File('input.txt')
     File convYamlFile = new File('input.yaml')
     File outputFile = new File('output.md')
-    String token
     String url = 'https://api.openai.com/v1/chat/completions'
     String[] modelList = ["gpt-4", "gpt-3.5-turbo", "gpt-3.5-turbo-16k"]
     String systemRoleInitContent = ''
@@ -32,14 +34,16 @@ class OpenAIChat {
     List<Map<String, String>> lastConversation = null
 
     static void main(String[] args) {
-        new OpenAIChat(args[0]).startListener()
+        new OpenAIChat(args).startListener()
     }
 
-    OpenAIChat(String token) {
-        this.token = token
+    OpenAIChat(String[] args) {
+        this.args = args
     }
 
     void startListener() {
+        def props = new Properties()
+        new File('system.properties').withInputStream { props.load(it) }     
         while (true) {
             String consoleInput = System.console().readLine 'Press Enter to submit the input file...'
             if(consoleInput.contains("clear")){
@@ -49,24 +53,25 @@ class OpenAIChat {
                 convYamlFile.write("conversation: []")
                 conversation = []
                 outputFile.write("")
+            } else if(consoleInput.contains("backup")){
+                backup()
+                outputFile.write("")
             } else {
-                int arrayIndexSelected = consoleInput ? consoleInput.replaceAll("[^0-9]", "").toInteger() : 1
-                if (consoleInput.contains("4e")) {
-                    systemRoleInitContent = 'You are a helpful assistant'
-                } else if (consoleInput.contains("4c")) {
-                    systemRoleInitContent = 'Act as a master programmer, respond in code for specified language only.'
-                } else {
-                    systemRoleInitContent = "Answer concisely, precisely, no summaries. Say '' or 'sry' for apologies and proceed."
-                }
-                int modelChoice = arrayIndexSelected != 4 ? 1 : 0
-                int max_tokenChoice = arrayIndexSelected != 4 ? 3200 : 7200
-                //TODO: write better logic for selecting different models
-                if(consoleInput.contains("3l")){
-                    systemRoleInitContent = 'You are a helpful assistant'
-                    modelChoice = 2
-                    max_tokenChoice = 1500
-                }
-
+                //Default
+                systemRoleInitContent = "Answer concisely, precisely, no summaries. Say 's' or 'sry' for apologies and proceed"
+                def modelChoice = 1
+                def max_tokenChoice = 3200
+                //system.properties prompts
+                props.each { propKey, propValue ->
+                    def (prompt, model, tokens) = propValue.split(':')
+                    model = model.toInteger()
+                    tokens = tokens.toInteger()
+                    if(consoleInput.equals(propKey)){
+                        systemRoleInitContent = prompt
+                        modelChoice = model
+                        max_tokenChoice = tokens
+                    }
+                }                     
                 if(!convYamlFile.exists()) convYamlFile.createNewFile()
                 if (convYamlFile.text.isEmpty()) convYamlFile.write("conversation: []")
                 Yaml yaml = new Yaml()
@@ -89,7 +94,7 @@ class OpenAIChat {
         def aiResponse
         def serverResponse
         try {
-            serverResponse = sendRequest('POST', url, jsonString, false, true).result
+            serverResponse = invokeSendRequest('POST', url, jsonString, false, true).result
             aiResponse = serverResponse.choices[0].message.content
         } catch (Exception e) {
             println "Error occurred while sending the request: ${e.message}"
@@ -100,7 +105,7 @@ class OpenAIChat {
 
         if (outputFile.exists()) {
             if(!outputFile.text.isEmpty()){
-                outputFile.append('\n---\n')
+                outputFile.append('\n\n---\n\n')
             }
         } else {
             outputFile.write('# Conversation\n')
@@ -130,6 +135,19 @@ class OpenAIChat {
         return dumper.dump(conversation)
     }
 
+    def backup() {
+        def sourceFile = Paths.get("output.md")
+        def dateFormat = new SimpleDateFormat("dd-MM-yyyy_HH_mm_ss")
+        dateFormat.setTimeZone(TimeZone.getTimeZone("EST"))
+        def now = dateFormat.format(new Date())
+        def targetFile = Paths.get("chats/output-${now}.md")
+
+        if(!targetFile.getParent().toFile().exists()) {
+            targetFile.getParent().toFile().mkdirs()
+        }
+        Files.copy(sourceFile, targetFile, StandardCopyOption.REPLACE_EXISTING)
+    }    
+
     void setJsonPayload(int modelChoice, int max_tokenChoice) {
         json = [
             model: modelList[modelChoice],
@@ -146,43 +164,27 @@ class OpenAIChat {
         }
     }
 
-    def sendRequest(String reqMethod, String URL, String message, boolean failOnError, boolean useProxy){
-        Authenticator authenticator = new Authenticator() {
-            public PasswordAuthentication getPasswordAuthentication() {
-                return (new PasswordAuthentication(username,
-                        password.toCharArray()))
-            }
-        }
-        def response = [:]
-        def request
-        if(false){
-            Authenticator.setDefault(authenticator)
-            Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("proxy.com", 8080))
-            request = new URL(URL).openConnection(proxy)
-        } else {
-            request = new URL(URL).openConnection()
-        }
-        request.setDoOutput(true)
-        request.setRequestMethod(reqMethod)
-        request.setRequestProperty('Authorization', "Bearer $token")
-        request.setRequestProperty('Content-Type', 'application/json')
-        if(!message.isEmpty())
-            request.getOutputStream().write(message.getBytes("UTF-8"))
-        def getRC = request.getResponseCode()
-        response.rc = getRC
-        def slurper = new JsonSlurper()
-        def result
-        try {
-            if(request.getInputStream().available())
-                result = slurper.parseText(request.getInputStream().getText())
-            response.result = result
-        } catch (Exception ignored) {
-            if(failOnError){
-                throw new Exception("Request made to $URL failed.\nResponse code is: $getRC\n${request.getResponseMessage()}\n${request.getErrorStream().getText()}")
-            } else{
-                response.result = request.getErrorStream().getText()
-            }
-        }
+    def invokeSendRequest(String reqMethod, String URL, String message, boolean failOnError, boolean useProxy) {
+        String serverUrl = "http://localhost:${args[0]}/sendRequest"
+        def connection = new URL(serverUrl).openConnection()
+        connection.setRequestMethod('POST')
+        connection.setDoOutput(true)
+        connection.setRequestProperty('Content-Type', 'application/json')
+
+        def payload = [
+            reqMethod: reqMethod,
+            URL: URL,
+            message: message,
+            failOnError: failOnError,
+            useProxy: useProxy
+        ]
+
+        connection.getOutputStream().write(new JsonBuilder(payload).toString().getBytes("UTF-8"))
+
+        def response = new JsonSlurper().parseText(connection.getInputStream().getText())
         return response
     }
+
 }
+
+
