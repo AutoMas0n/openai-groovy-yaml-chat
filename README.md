@@ -28,27 +28,20 @@ flowchart LR
     N --> O[Return response]
 ```
 
-# Running server and client on the same machine with a single command
-Linux:
+# Running client and server
+bash:
 ```bash
 export token='myOpenAIToken'
 export port=9001
-groovy server.groovy $port $token & groovy openai-chat-yaml.groovy $port
+groovy main.groovy $port $token
 ```
 Windows Batch:  
 ```batch
 set token=myOpenAIToken
 set port=9001
-start /B groovy server.groovy %port% %token%
-groovy openai-chat-yaml.groovy %port%
+groovy main.groovy %port% %token%
 ```
-Windows Powershell(TBD - not working yet):  
-```powershell
-$env:token ='myOpenAIToken'
-$env:port = 9001
-Start-Job -ScriptBlock { groovy server.groovy $env:port $env:token }
-groovy openai-chat-yaml.groovy $env:port
-```
+
 # Single Codespace startup command (Server)
 ```bash
 export token='myOpenAIToken' && curl -Ls https://sh.jbang.dev | bash -s - app setup && source ~/.bashrc && git clone https://github.com/automationStati0n/openai-groovy-yaml-chat && cd openai-groovy-yaml-chat && jbang jbang_main_v2_JAVA11.java server.groovy $port $token
