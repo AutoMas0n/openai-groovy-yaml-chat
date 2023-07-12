@@ -22,56 +22,90 @@ import java.nio.file.*
 import java.text.SimpleDateFormat
 
 class OpenAIChat {
-    String[] args
+    //TODO ADD ARGS FROM PREVIOUS COMMIT
     File userInputFile = new File('input.txt')
     File convYamlFile = new File('input.yaml')
     File outputFile = new File('output.md')
+    String token
     String url = 'https://api.openai.com/v1/chat/completions'
     String[] modelList = ["gpt-4", "gpt-3.5-turbo", "gpt-3.5-turbo-16k"]
     String systemRoleInitContent = ''
     LinkedHashMap<String, Serializable> json
     List<Map<String, String>> conversation
     List<Map<String, String>> lastConversation = null
+    double temp = 0.6
 
     static void main(String[] args) {
-        new OpenAIChat(args).startListener()
-    }
-
-    OpenAIChat(String[] args) {
-        this.args = args
+        new OpenAIChat().startListener()
     }
 
     void startListener() {
-        def props = new Properties()
-        new File('system.properties').withInputStream { props.load(it) }     
+        def properties = new Properties()
+        new File('system.properties').withInputStream { properties.load(it) }     
         while (true) {
-            String consoleInput = System.console().readLine 'Press Enter to submit the input file...'
-            if(consoleInput.contains("clear")){
+            processConsoleInput(properties)
+        }
+    }
+
+    void processConsoleInput(Properties props) {
+        String consoleInput = System.console().readLine 'Press Enter to submit the input file...'
+        def modelChoice = 1
+        def max_tokenChoice = 3200
+        //Load system.properties prompts / model choice / max tokens
+        props.each { propKey, propValue ->
+            def (prompt, model, tokens) = propValue.split(':')
+            model = model.toInteger()
+            tokens = tokens.toInteger()
+            if(consoleInput.equals(propKey)){
+                systemRoleInitContent = prompt
+                modelChoice = model
+                max_tokenChoice = tokens
+            }
+        }
+        switch (consoleInput) {
+            case { it.contains("+") }:
+                temp = Math.min(1.0, temp + consoleInput.count("+") * 0.1)
+                temp = Math.round(temp * 10) / 10.0
+                println "Temperature set to ${temp}"
+                break
+            case { it.contains("-") }:
+                temp = Math.max(0.0, temp - consoleInput.count("-") * 0.1)
+                temp = Math.round(temp * 10) / 10.0
+                println "Temperature set to ${temp}" 
+                break
+            case { it.contains("clear") }:
                 convYamlFile.write("conversation: []")
                 conversation = []
-            } else if(consoleInput.contains("reset")){
+                break
+            case { it.contains("reset") }:
                 convYamlFile.write("conversation: []")
                 conversation = []
                 outputFile.write("")
-            } else if(consoleInput.contains("backup")){
+                break
+            case { it.contains("backup") }:
                 backup()
                 outputFile.write("")
-            } else {
-                //Default
-                systemRoleInitContent = "Answer concisely, precisely, no summaries. Say 's' or 'sry' for apologies and proceed"
-                def modelChoice = 1
-                def max_tokenChoice = 3200
-                //system.properties prompts
-                props.each { propKey, propValue ->
-                    def (prompt, model, tokens) = propValue.split(':')
-                    model = model.toInteger()
-                    tokens = tokens.toInteger()
-                    if(consoleInput.equals(propKey)){
-                        systemRoleInitContent = prompt
-                        modelChoice = model
-                        max_tokenChoice = tokens
-                    }
-                }                     
+                break
+            case { it.contains("list") }:
+                println invokeSendRequest('GET', 'https://api.openai.com/v1/models', '', false, true).result
+                break
+            case { it.contains("heading") }:
+                systemRoleInitContent = "summarize text into heading"
+                def outputFile = new File("output.md")
+                def lines = outputFile.readLines()
+                def lastDelimiterIndex = lines.lastIndexOf('---')
+                if (lastDelimiterIndex != -1) {
+                    def textAfterLastDelimiter = lines[lastDelimiterIndex + 1..-1].join('\n')
+                    setJsonPayload(modelChoice, max_tokenChoice)
+                    json.messages.add([role: 'user', content: """${truncateString(textAfterLastDelimiter)}"""])
+                    lines[lastDelimiterIndex] = "---\n## ${sendAndReceiveFromAI()}"
+                    outputFile.write(lines.join('\n'))
+                } else {
+                    println "Delimiter '---' not found. Heading will not be created"
+                }
+                break                
+            default:
+                systemRoleInitContent = "Answer concisely, precisely, no summaries. Say 's' or 'sry' for apologies and proceed"                    
                 if(!convYamlFile.exists()) convYamlFile.createNewFile()
                 if (convYamlFile.text.isEmpty()) convYamlFile.write("conversation: []")
                 Yaml yaml = new Yaml()
@@ -79,17 +113,17 @@ class OpenAIChat {
                 conversation = yamlMap.get("conversation")
                 updateCoversationYaml('user', userInputFile.text)
                 setJsonPayload(modelChoice, max_tokenChoice)
-
+                addYamlConversation()
                 if (conversation == lastConversation) {
                     println "The input file has not changed since the last submission. Skipping..."
                 } else {
                     processConversation()
                 }
-            }
+                break
         }
-    }
+    }        
 
-    void processConversation() {
+    def sendAndReceiveFromAI(){
         String jsonString = JsonOutput.toJson(json)
         def aiResponse
         def serverResponse
@@ -102,7 +136,11 @@ class OpenAIChat {
             println "AI response:\n $aiResponse"
             return
         }
+        return aiResponse
+    }
 
+    void processConversation() {
+        def aiResponse = sendAndReceiveFromAI()
         if (outputFile.exists()) {
             if(!outputFile.text.isEmpty()){
                 outputFile.append('\n\n---\n\n')
@@ -153,10 +191,13 @@ class OpenAIChat {
             model: modelList[modelChoice],
             messages: [],
             max_tokens: max_tokenChoice,
-            temperature: 0.6
+            temperature: temp
         ]
         println json.toString()
         json.messages.add([role: 'system', content: systemRoleInitContent])
+    }
+
+    void addYamlConversation(){
         conversation.each { entry ->
             entry.each { inputKey, inputContent ->
                 json.messages.add([role: inputKey, content: """${inputContent}"""])
@@ -164,8 +205,20 @@ class OpenAIChat {
         }
     }
 
+//Utilities:
+
+    //For summary with gpt-3.5
+    def truncateString(String str) {
+        def tokens = str.tokenize()
+        if (tokens.size() > 2500) {
+            return tokens.take(2500).join(' ')
+        } else {
+            return str
+        }
+    }
+
     def invokeSendRequest(String reqMethod, String URL, String message, boolean failOnError, boolean useProxy) {
-        String serverUrl = "http://localhost:${args[0]}/sendRequest"
+        def serverUrl = 'http://localhost:9001/sendRequest'
         def connection = new URL(serverUrl).openConnection()
         connection.setRequestMethod('POST')
         connection.setDoOutput(true)
@@ -186,5 +239,3 @@ class OpenAIChat {
     }
 
 }
-
-
