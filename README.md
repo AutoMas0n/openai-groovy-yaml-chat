@@ -44,7 +44,7 @@ export token='myOpenAIToken' port=9001 &&  curl -Ls https://sh.jbang.dev | bash 
 ```
 
 # Running the client
-**Port defaults to 9001 if not specified**
+**Port defaults to 9001 if not specified**  
 bash:
 ```bash
 export port=9001
