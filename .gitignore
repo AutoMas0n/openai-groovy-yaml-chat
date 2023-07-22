@@ -4,3 +4,6 @@ build/
 dist/
 *.spec
 chats/
+input.txt
+input.yaml
+output.md
