@@ -68,7 +68,7 @@ groovy openai-chat-yaml.groovy %port%
    ```
 
 ## Quickstart with main.groovy
-- You can put your openai API key in a file called `key` (added to .gitignore but ensure it's not pushed to git - *Not recommended*)
+- You can put your openai API key in a file called `key` - *Not recommended* (added to .gitignore but ensure it's not pushed to git)
 - If you don't specify a port, `9001` is used by default when using `key` file
 
 ## system.properties
