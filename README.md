@@ -6,6 +6,9 @@ This is an experimental groovy/file based chat client with openai api meant for 
 - An internet connection
 - OpenAI API key
 
+# Demo (Pending gif)
+![./readme_images/VisualStudioDemo.png](./readme_images/VisualStudioDemo.png)
+
 # Diagram (From AI Interpretation)
 ```mermaid
 flowchart LR

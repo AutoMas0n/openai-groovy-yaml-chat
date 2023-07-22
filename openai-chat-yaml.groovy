@@ -26,12 +26,14 @@ class OpenAIChat {
     File userInputFile = new File('input.txt')
     File convYamlFile = new File('input.yaml')
     File outputFile = new File('output.md')
+    String token
     String url = 'https://api.openai.com/v1/chat/completions'
     String[] modelList = ["gpt-4", "gpt-3.5-turbo", "gpt-3.5-turbo-16k"]
     String systemRoleInitContent = ''
     LinkedHashMap<String, Serializable> json
     List<Map<String, String>> conversation
     List<Map<String, String>> lastConversation = null
+    double temp = 0.6
 
     static void main(String[] args) {
         OpenAIChat aiChat = new OpenAIChat(args)
@@ -71,7 +73,7 @@ class OpenAIChat {
             println "Server up and running on port $port"
         }
     }
-    
+
     void startListener() {
         def properties = new Properties()
         new File('system.properties').withInputStream { properties.load(it) }     
@@ -136,7 +138,7 @@ class OpenAIChat {
                 } else {
                     println "Delimiter '---' not found. Heading will not be created"
                 }
-                break                
+                break
             default:
                 systemRoleInitContent = "Answer concisely, precisely, no summaries. Say 's' or 'sry' for apologies and proceed"                    
                 if(!convYamlFile.exists()) convYamlFile.createNewFile()
@@ -154,7 +156,7 @@ class OpenAIChat {
                 }
                 break
         }
-    }        
+    }
 
     def sendAndReceiveFromAI(){
         String jsonString = JsonOutput.toJson(json)
@@ -217,7 +219,7 @@ class OpenAIChat {
             targetFile.getParent().toFile().mkdirs()
         }
         Files.copy(sourceFile, targetFile, StandardCopyOption.REPLACE_EXISTING)
-    }    
+    }
 
     void setJsonPayload(int modelChoice, int max_tokenChoice) {
         json = [
