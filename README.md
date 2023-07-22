@@ -6,7 +6,7 @@ This is an experimental groovy/file based chat client with openai api meant for 
 - An internet connection
 - OpenAI API key
 
-# Diagram
+# Diagram (From AI Interpretation)
 ```mermaid
 flowchart LR
     A[system.properties] --> B[server.groovy]
