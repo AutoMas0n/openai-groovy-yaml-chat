@@ -34,16 +34,47 @@ class OpenAIChat {
     List<Map<String, String>> lastConversation = null
 
     static void main(String[] args) {
-        new OpenAIChat(args).startListener()
+        OpenAIChat aiChat = new OpenAIChat(args)
+        aiChat.checkForServer()
+        aiChat.startListener()
     }
 
     OpenAIChat(String[] args) {
         this.args = args
+        if(args.size() == 0){
+            this.args = ['9001']
+        }
+    }
+
+    void checkForServer(){
+        int port = args[0].toInteger()
+        boolean isListening = false
+        long timeout = 30000 // timeout in milliseconds (30 seconds)
+        long retryInterval = 1000 // retry interval in milliseconds (1 second)
+        long maxAttempts = timeout / retryInterval
+        long attempts = 0
+        while (!isListening && attempts < maxAttempts) {
+            try {
+                new Socket("localhost", port).close()
+                isListening = true
+            } catch (ConnectException e) {
+                println "Waiting for server to come up on port $port. Retrying..."
+                Thread.sleep(retryInterval) // wait for 1 second before retrying
+                attempts++
+            } catch (Exception e) {
+                println "Error: " + e.getMessage()
+            }
+        }
+        if (!isListening) {
+            println "Server did not come up on port $port within $timeout milliseconds."
+        } else {
+            println "Server up and running on port $port"
+        }
     }
 
     void startListener() {
         def props = new Properties()
-        new File('system.properties').withInputStream { props.load(it) }     
+        new File('system.properties').withInputStream { props.load(it) }
         while (true) {
             String consoleInput = System.console().readLine 'Press Enter to submit the input file...'
             if(consoleInput.contains("clear")){
@@ -71,7 +102,7 @@ class OpenAIChat {
                         modelChoice = model
                         max_tokenChoice = tokens
                     }
-                }                     
+                }
                 if(!convYamlFile.exists()) convYamlFile.createNewFile()
                 if (convYamlFile.text.isEmpty()) convYamlFile.write("conversation: []")
                 Yaml yaml = new Yaml()
@@ -146,7 +177,7 @@ class OpenAIChat {
             targetFile.getParent().toFile().mkdirs()
         }
         Files.copy(sourceFile, targetFile, StandardCopyOption.REPLACE_EXISTING)
-    }    
+    }
 
     void setJsonPayload(int modelChoice, int max_tokenChoice) {
         json = [
@@ -184,7 +215,4 @@ class OpenAIChat {
         def response = new JsonSlurper().parseText(connection.getInputStream().getText())
         return response
     }
-
 }
-
-
