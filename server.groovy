@@ -74,5 +74,5 @@ server.createContext('/sendRequest', { HttpExchange exchange ->
 })
 server.start()
 CountDownLatch latch = new CountDownLatch(1)
-println "OpenAI Tunnel Server started\n"
+println "OpenAI Tunnel Server started"
 latch.await()

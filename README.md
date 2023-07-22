@@ -2,8 +2,6 @@
 This is an experimental groovy/file based chat client with openai api meant for use with visual studio live code share.
 *Live streaming of responses is not supported*
 
-## (This Repo is a work in progress)
-
 # Prerequisites
 - An internet connection
 - OpenAI API key
@@ -54,3 +52,8 @@ export token='myOpenAIToken' port=9001 &&  curl -Ls https://sh.jbang.dev | bash 
    ```bash
    jbang https://gist.github.com/automationStati0n/d8d28cfb7a68592c79fd052419597e04 openai-chat-yaml.groovy $token
    ```
+
+# Extras
+## Quickstart with main.groovy
+- You can put your openai API key in a file called `key` (added to .gitignore but ensure it's not pushed to git - *Not recommended*)
+- If you don't specify a port, `9001` is used by default when using `key` file
