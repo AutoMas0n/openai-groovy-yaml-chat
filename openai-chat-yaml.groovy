@@ -28,7 +28,7 @@ class OpenAIChat {
     File outputFile = new File('output.md')
     String token
     String url = 'https://api.openai.com/v1/chat/completions'
-    String[] modelList = ["gpt-4", "gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-4-0125-preview"]
+    String[] modelList = ["gpt-4", "gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-4-1106-preview"]
     String systemRoleInitContent = ''
     LinkedHashMap<String, Serializable> json
     List<Map<String, String>> conversation
