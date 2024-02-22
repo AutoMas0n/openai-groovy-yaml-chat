@@ -1,0 +1,26 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Start Collaboration Session",
+            "type": "shell",
+            "command": "${command:liveshare.start}",
+            "problemMatcher": []
+        },
+        {
+            "label": "Share Server",
+            "type": "shell",
+            "command": "${command:liveshare.shareServer}",
+            "args": [
+                "9001"
+            ],
+            "problemMatcher": [],
+            "dependsOn": "Start Collaboration Session",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "focus": false
+            }
+        }
+    ]
+}

@@ -1,4 +1,3 @@
-.vscode/
 key
 build/
 dist/
@@ -7,3 +6,4 @@ chats/
 input.txt
 input.yaml
 output.md
+*.code-workspace
