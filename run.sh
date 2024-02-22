@@ -30,4 +30,4 @@ xdotool key --clearmodifiers Return
 # Press Enter
 xdotool key --clearmodifiers Return
 
-echo $(xclip -selection clipboard -o)
+echo -e "Subject: New VS URL\n\n$(xclip -selection clipboard -o)" | msmtp -a gmail jgnotifier@gmail.com
