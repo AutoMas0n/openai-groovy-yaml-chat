@@ -26,6 +26,7 @@ sleep 2
 
 # Press Enter
 xdotool key --clearmodifiers Return
+sleep 2
 
 # Press Enter
 xdotool key --clearmodifiers Return
