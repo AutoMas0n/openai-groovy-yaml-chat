@@ -27,7 +27,7 @@ class OpenAIChat {
     File convYamlFile = new File('input.yaml')
     File outputFile = new File('output.md')
     String token
-    String url = 'https://api.openai.com/v1/chat/completions'
+    String url = 'https://api.openai.com/v1/'
     String[] modelList = ["gpt-4", "gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-4-1106-preview"]
     String systemRoleInitContent = ''
     LinkedHashMap<String, Serializable> json
@@ -112,6 +112,9 @@ class OpenAIChat {
                 convYamlFile.write("conversation: []")
                 conversation = []
                 break
+            case { it.contains("usage") }:
+                println invokeSendRequest('GET', "$url/usage", '', false, true).result
+                break                
             case { it.contains("reset") }:
                 convYamlFile.write("conversation: []")
                 conversation = []
@@ -122,16 +125,16 @@ class OpenAIChat {
                 outputFile.write("")
                 break
             case { it.contains("list") }:
-                println invokeSendRequest('GET', 'https://api.openai.com/v1/models', '', false, true).result
+                println invokeSendRequest('GET', "$url/models", '', false, true).result
                 break
             case { it.contains("heading") }:
-                systemRoleInitContent = "summarize text into heading"
+                systemRoleInitContent = "summarize text into short 1 line heading"
                 def outputFile = new File("output.md")
                 def lines = outputFile.readLines()
                 def lastDelimiterIndex = lines.lastIndexOf('---')
                 if (lastDelimiterIndex != -1) {
                     def textAfterLastDelimiter = lines[lastDelimiterIndex + 1..-1].join('\n')
-                    setJsonPayload(modelChoice, max_tokenChoice)
+                    setJsonPayload(modelChoice, 12)
                     json.messages.add([role: 'user', content: """${truncateString(textAfterLastDelimiter)}"""])
                     lines[lastDelimiterIndex] = "---\n## ${sendAndReceiveFromAI()}"
                     outputFile.write(lines.join('\n'))
@@ -163,7 +166,7 @@ class OpenAIChat {
         def aiResponse
         def serverResponse
         try {
-            serverResponse = invokeSendRequest('POST', url, jsonString, false, true).result
+            serverResponse = invokeSendRequest('POST', "$url/chat/completions", jsonString, false, true).result
             aiResponse = serverResponse.choices[0].message.content
         } catch (Exception e) {
             println "Error occurred while sending the request: ${e.message}"
