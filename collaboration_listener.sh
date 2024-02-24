@@ -13,8 +13,8 @@ while true; do
   collaboration_active=$(cat "$state_file")
   # Simulate the keypress Ctrl+Shift+P
   xdotool key --clearmodifiers ctrl+shift+P
-
-  # Wait for the command palette to open
+  sleep 2
+  xdotool key --clearmodifiers ctrl+shift+P
   sleep 1
 
   if [ "$collaboration_active" = "false" ]; then
