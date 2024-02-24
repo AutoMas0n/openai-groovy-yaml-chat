@@ -26,6 +26,7 @@ class OpenAIChat {
     File userInputFile = new File('input.txt')
     File convYamlFile = new File('input.yaml')
     File outputFile = new File('output.md')
+    Boolean autoClean = true
     String token
     String url = 'https://api.openai.com/v1/'
     String[] modelList = ["gpt-4", "gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-4-1106-preview"]
@@ -120,6 +121,10 @@ class OpenAIChat {
                 conversation = []
                 outputFile.write("")
                 break
+            case { it.contains("autoclean") }:
+                autoClean = !autoClean
+                println "autoClean = $autoClean"
+                break                
             case { it.contains("backup") }:
                 backup()
                 outputFile.write("")
@@ -195,6 +200,8 @@ class OpenAIChat {
     }
 
     String updateCoversationYaml(String role, String text) {
+        if(autoClean)
+            text = cleanInput(text)
         Map<String, String> newEntry = [(role): text]
 
         if (!conversation) {
@@ -210,6 +217,13 @@ class OpenAIChat {
         options.setIndent(2)
         Yaml dumper = new Yaml(options)
         return dumper.dump(conversation)
+    }
+
+    String cleanInput(String input) {
+        input = input.replaceAll(/(?m)[ \t]+$/, '')
+        input = input.replaceAll(/\n+/, "\n")
+        input = input.trim()
+        return input
     }
 
     def backup() {
