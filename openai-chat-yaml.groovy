@@ -143,7 +143,8 @@ class OpenAIChat {
                 }
                 break
             default:
-                systemRoleInitContent = "Answer concisely, precisely, no summaries. Say 's' or 'sry' for apologies and proceed"                    
+                if(systemRoleInitContent.isEmpty())
+                    systemRoleInitContent = "Answer concisely, precisely, no summaries. Say 's' or 'sry' for apologies and proceed"
                 if(!convYamlFile.exists()) convYamlFile.createNewFile()
                 if (convYamlFile.text.isEmpty()) convYamlFile.write("conversation: []")
                 Yaml yaml = new Yaml()
