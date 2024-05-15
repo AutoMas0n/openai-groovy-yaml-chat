@@ -29,7 +29,7 @@ class OpenAIChat {
     Boolean autoClean = true
     String token
     String url = 'https://api.openai.com/v1/'
-    String[] modelList = ["gpt-4", "gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-4-1106-preview"]
+    String[] modelList = ["gpt-4o", "gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-4-1106-preview"]
     String systemRoleInitContent = ''
     LinkedHashMap<String, Serializable> json
     List<Map<String, String>> conversation
