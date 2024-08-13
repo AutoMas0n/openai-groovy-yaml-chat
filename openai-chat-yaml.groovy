@@ -151,7 +151,7 @@ class OpenAIChat {
                 if(systemRoleInitContent.isEmpty())
                     systemRoleInitContent = "Answer concisely, precisely, no summaries. Say 's' or 'sry' for apologies and proceed"
                 if(!convYamlFile.exists()) convYamlFile.createNewFile()
-                if (convYamlFile.text.isEmpty()) convYamlFile.write("conversation: []")
+                if (convYamlFile.text.trim().isEmpty()) convYamlFile.write("conversation: []")
                 Yaml yaml = new Yaml()
                 Map<String, List<Map<String, String>>> yamlMap = yaml.load(convYamlFile.text)
                 conversation = yamlMap.get("conversation")
@@ -167,20 +167,21 @@ class OpenAIChat {
         }
     }
 
-    def sendAndReceiveFromAI(){
-        String jsonString = JsonOutput.toJson(json)
-        def aiResponse
+    def sendAndReceiveFromAI() {
         def serverResponse
         try {
+            String jsonString = JsonOutput.toJson(json)
+            def aiResponse
             serverResponse = invokeSendRequest('POST', "$url/chat/completions", jsonString, false, true).result
             aiResponse = serverResponse.choices[0].message.content
+            return aiResponse
         } catch (Exception e) {
             println "Error occurred while sending the request: ${e.message}"
-            aiResponse = serverResponse
-            println "AI response:\n $aiResponse"
-            return
+            if(serverResponse!=null)
+                println "serverResponse: $serverResponse"
+            println 'Could not get AI response.'
+            return ''
         }
-        return aiResponse
     }
 
     void processConversation() {
@@ -193,7 +194,10 @@ class OpenAIChat {
             outputFile.write('# Conversation\n')
         }
 
-        outputFile.append(aiResponse)
+        def lastMessageMap = conversation.last()
+        def lastMessage = lastMessageMap.values().last() // Get the last value from the map, remove 'user:' prefix
+        def quotedMessage = lastMessage.split('\n').collect { '> ' + it }.join('\n')
+        outputFile.append(quotedMessage + '\n\n' + aiResponse)
         String updatedYaml = updateCoversationYaml('assistant', aiResponse)
         convYamlFile.write("conversation:\n" + updatedYaml)
         lastConversation = conversation
