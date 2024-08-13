@@ -16,6 +16,7 @@ import java.security.SecureRandom
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.CountDownLatch
+import java.nio.charset.StandardCharsets
 
 
 def sendRequest(String reqMethod, String URL, String message, boolean failOnError, boolean useProxy){
@@ -45,9 +46,17 @@ def sendRequest(String reqMethod, String URL, String message, boolean failOnErro
     def slurper = new JsonSlurper()
     def result
     try {
-        if(request.getInputStream().available())
-            result = slurper.parseText(request.getInputStream().getText())
-        response.result = result
+        if (request.getInputStream().available()) {
+            def responseText = request.getInputStream().getText()
+            result = slurper.parseText(responseText)
+            response.result = result
+        }
+        if(result==null){
+            System.sleep(100)
+            def responseText = request.getInputStream().getText()
+            result = slurper.parseText(responseText)
+            response.result = result
+        }
     } catch (Exception ignored) {
         if(failOnError){
             throw new Exception("Request made to $URL failed.\nResponse code is: $getRC\n${request.getResponseMessage()}\n${request.getErrorStream().getText()}")
