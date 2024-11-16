@@ -155,7 +155,17 @@ class OpenAIChat {
                 Yaml yaml = new Yaml()
                 Map<String, List<Map<String, String>>> yamlMap = yaml.load(convYamlFile.text)
                 conversation = yamlMap.get("conversation")
-                updateCoversationYaml('user', userInputFile.text)
+                if(consoleInput.equals('c')) {
+                    convYamlFile.write("conversation: []")
+                    conversation = []                    
+                    Tuple2<String, String> result = eatInputInChunks(userInputFile.text, 4)
+                    String remainingContent = result.first
+                    String droppedContent = result.second
+                    userInputFile.text = remainingContent
+                    updateCoversationYaml('user', droppedContent)
+                } else {
+                    updateCoversationYaml('user', userInputFile.text)
+                }
                 setJsonPayload(modelChoice, max_tokenChoice)
                 addYamlConversation()
                 if (conversation == lastConversation) {
@@ -197,7 +207,8 @@ class OpenAIChat {
         def lastMessageMap = conversation.last()
         def lastMessage = lastMessageMap.values().last() // Get the last value from the map, remove 'user:' prefix
         def quotedMessage = lastMessage.split('\n').collect { '> ' + it }.join('\n')
-        outputFile.append(quotedMessage + '\n\n' + aiResponse)
+        // outputFile.append(quotedMessage + '\n\n' + aiResponse)
+        outputFile.append(aiResponse)
         String updatedYaml = updateCoversationYaml('assistant', aiResponse)
         convYamlFile.write("conversation:\n" + updatedYaml)
         lastConversation = conversation
@@ -221,6 +232,28 @@ class OpenAIChat {
         options.setIndent(2)
         Yaml dumper = new Yaml(options)
         return dumper.dump(conversation)
+    }
+
+    Tuple2<String, String> eatInputInChunks(String content, int numChunksToEat) {
+        // Split the content into chunks based on timestamps indicating new chunks
+        def chunks = content.split(/(?=\n\d{2}:\d{2}\n)/)
+        // Initialize a variable to keep track of the dropped chunks
+        def droppedChunks = []
+        // Remove the specified number of chunks from the beginning if possible
+        if (chunks.size() > numChunksToEat) {
+            droppedChunks = chunks.take(numChunksToEat)
+            chunks = chunks.drop(numChunksToEat)
+        } else {
+            // If the number of chunks to eat exceeds available chunks, drop all chunks
+            droppedChunks = chunks
+            chunks = []
+        }
+        // Join the remaining chunks back together
+        def remainingContent = chunks.join("")
+        // Store the dropped chunks in a separate variable and join them together
+        def droppedContent = droppedChunks.join("")
+        // Return both the remaining content and the dropped content as a tuple
+        return new Tuple2<>(remainingContent, droppedContent)
     }
 
     String cleanInput(String input) {
@@ -293,5 +326,35 @@ class OpenAIChat {
 
         def response = new JsonSlurper().parseText(connection.getInputStream().getText())
         return response
+    }
+}
+
+class Tuple2<T1, T2> {
+    final T1 first
+    final T2 second
+
+    Tuple2(T1 first, T2 second) {
+        this.first = first
+        this.second = second
+    }
+
+    @Override
+    String toString() {
+        return "Tuple2(first: $first, second: $second)"
+    }
+
+    @Override
+    boolean equals(Object obj) {
+        if (this.is(obj)) return true
+        if (obj == null || getClass() != obj.getClass()) return false
+        Tuple2 other = (Tuple2) obj
+        return first == other.first && second == other.second
+    }
+
+    @Override
+    int hashCode() {
+        int result = first != null ? first.hashCode() : 0
+        result = 31 * result + (second != null ? second.hashCode() : 0)
+        return result
     }
 }
