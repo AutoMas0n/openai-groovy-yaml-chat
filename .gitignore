@@ -1,4 +1,5 @@
 key
+deepkey
 build/
 dist/
 *.spec
