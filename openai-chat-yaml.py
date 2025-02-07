@@ -195,28 +195,29 @@ class OpenAIChat:
             print("No input in file")
             return
 
+        # Add user's input to the conversation
+        self.update_conversation('user', user_input)
+
         payload = self.create_payload(system_content, model_choice, max_tokens)
         response = self.send_to_server(payload)
         
-        if self.conversation == self.last_conversation:
-            print("No changes since last submission")
-            return
-
-        response = self.send_to_server(payload)
         if response:
-            self.handle_response(response, user_input)
+            self.handle_response(response)
 
     def create_payload(self, system_content, model_choice, max_tokens):
+        # Build messages with system and existing conversation (including the new user input)
+        messages = [{'role': 'system', 'content': system_content}]
+        for entry in self.conversation:
+            for role, content in entry.items():
+                messages.append({'role': role, 'content': content})
+        
         return {
             'model': self.model_list[model_choice],
-            'messages': [{'role': 'system', 'content': system_content}] + [
-                {'role': role, 'content': content}
-                for entry in self.conversation
-                for role, content in entry.items()
-            ],
+            'messages': messages,
             'max_tokens': max_tokens,
             'temperature': self.temp
         }
+
 
     def send_to_server(self, payload):
         try:
@@ -235,23 +236,21 @@ class OpenAIChat:
             print(f"Error contacting server: {e}")
             return None
 
-    def handle_response(self, response, user_input):
+    def handle_response(self, response):
         try:
             ai_response = response['choices'][0]['message']['content']
         except (KeyError, IndexError):
             print("Invalid response format from API")
             return
 
-        self.update_output(user_input, ai_response)
+        self.update_output(ai_response)
         self.update_conversation('assistant', ai_response)
         self.last_conversation = self.conversation.copy()
 
-    def update_output(self, user_input, ai_response):
+    def update_output(self, ai_response):
         header = '\n\n---\n\n' if Path(self.output_file).exists() else '# Conversation\n'
-        quoted_input = '\n'.join(f'> {line}' for line in user_input.split('\n'))
-        
         with open(self.output_file, 'a') as f:
-            f.write(f"{header}{quoted_input}\n\n{ai_response}")
+            f.write(f"{header}{ai_response}")
 
     def load_conversation(self):
         try:
