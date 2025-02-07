@@ -12,6 +12,9 @@ import os
 import shutil
 from datetime import datetime
 import re
+import warnings
+import urllib3
+warnings.filterwarnings("ignore", category=urllib3.exceptions.InsecureRequestWarning)
 
 # ---------- Server Implementation ----------
 class OpenAIServerHandler(BaseHTTPRequestHandler):
@@ -21,22 +24,27 @@ class OpenAIServerHandler(BaseHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             data = json.loads(post_data)
             
+            # Determine the appropriate API key based on the URL
+            url = data.get('URL', '')
+            if 'api.deepseek.com' in url:
+                api_key = self.server.keys.get('deepseek', '')
+            else:  # Default to OpenAI
+                api_key = self.server.keys.get('openai', '')
+
             headers = {
-                'Authorization': f'Bearer {self.server.key}',
+                'Authorization': f'Bearer {api_key}',
                 'Content-Type': 'application/json'
             }
             
             try:
-                # Correct: data['message'] is already a dict, no need to parse
                 message = data['message']
                 response = requests.request(
                     data['reqMethod'],
-                    data['URL'],
+                    url,
                     headers=headers,
-                    json=message,  # Use the message directly
+                    json=message,
                     verify=False
                 )
-                # Handle cases where response has no content
                 response_content = response.json() if response.content else {}
                 response_data = {
                     'rc': response.status_code,
@@ -48,8 +56,7 @@ class OpenAIServerHandler(BaseHTTPRequestHandler):
                     'result': str(e)
                 }
             
-            # Send the response back to the client
-            self.send_response(200)  # Always return 200 indicating server processed the request
+            self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps(response_data).encode('utf-8'))
@@ -59,13 +66,13 @@ class OpenAIServerHandler(BaseHTTPRequestHandler):
             self.wfile.write(b'Not Found')
 
 class OpenAIServer(HTTPServer):
-    def __init__(self, server_address, key):
-        self.key = key
+    def __init__(self, server_address, keys):
+        self.keys = keys  # Dictionary containing provider keys
         super().__init__(server_address, OpenAIServerHandler)
 
-def run_server(port, key):
-    server = OpenAIServer(('localhost', port), key)
-    print(f"OpenAI Tunnel Server started on port {port}")
+def run_server(port, keys):
+    server = OpenAIServer(('localhost', port), keys)
+    print(f"AI Tunnel Server started on port {port}")
     server.serve_forever()
 
 # ---------- Client Implementation ----------
@@ -220,17 +227,27 @@ class OpenAIChat:
 
 
     def send_to_server(self, payload):
+        # Determine the appropriate API endpoint based on model name
+        model_name = payload.get('model', '').lower()
+        if 'deep' in model_name:
+            url = 'https://api.deepseek.com/v1/chat/completions'
+        else:
+            url = 'https://api.openai.com/v1/chat/completions'
+
         try:
             response = requests.post(
                 f'http://localhost:{self.port}/sendRequest',
                 json={
                     'reqMethod': 'POST',
-                    'URL': 'https://api.openai.com/v1/chat/completions',
-                    'message': payload,  # Send the dict directly
+                    'URL': url,
+                    'message': payload,
                     'failOnError': False,
                     'useProxy': False
                 }
             )
+            response_data = response.json()
+            if 'error' in response_data.get('result', {}):
+                print(f"{response_data['rc']} | {response_data['result']['error']['message']}")            
             return response.json().get('result', {})
         except Exception as e:
             print(f"Error contacting server: {e}")
@@ -334,11 +351,13 @@ def main():
         except FileNotFoundError:
             raise Exception(f'Missing {name} - provide as argument or file')
 
-    key = get_key('key')
-    deepkey = get_key('deepkey')  # Not used in current implementation
+    keys = {
+        'openai': get_key('key'),
+        'deepseek': get_key('deepkey')
+    }
 
-    # Start server
-    server_thread = threading.Thread(target=run_server, args=(port, key), daemon=True)
+    # Start server with both keys
+    server_thread = threading.Thread(target=run_server, args=(port, keys), daemon=True)
     server_thread.start()
 
     # Start client
