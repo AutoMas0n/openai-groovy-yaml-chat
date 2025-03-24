@@ -192,7 +192,7 @@ class OpenAIChat:
         self.load_conversation()
         
         try:
-            with open(self.user_input_file, 'r') as f:
+            with open(self.user_input_file, 'r', encoding='utf-8') as f:
                 user_input = f.read()
         except FileNotFoundError:
             print("Input file not found")
