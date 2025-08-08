@@ -88,7 +88,8 @@ class OpenAIChat:
             "gpt-3.5-turbo", 
             "gpt-3.5-turbo-16k", 
             "gpt-4-1106-preview",
-            "deepseek-reasoner"
+            "deepseek-reasoner",
+            "gpt-5-2025-08-07"
         ]
         self.system_role_init_content = ''
         self.conversation = []
@@ -212,18 +213,33 @@ class OpenAIChat:
             self.handle_response(response)
 
     def create_payload(self, system_content, model_choice, max_tokens):
-        # Build messages with system and existing conversation (including the new user input)
+        # Build messages with system and existing conversation
         messages = [{'role': 'system', 'content': system_content}]
         for entry in self.conversation:
             for role, content in entry.items():
                 messages.append({'role': role, 'content': content})
-        
-        return {
+
+        payload = {
             'model': self.model_list[model_choice],
             'messages': messages,
-            'max_tokens': max_tokens,
-            'temperature': self.temp
         }
+
+        # Models requiring the new token parameter
+        new_token_param_models = {
+            m.lower() for m in self.model_list if m.lower().startswith("gpt-5")
+        }
+
+        model_name = self.model_list[model_choice].lower()
+        token_param = 'max_completion_tokens' if model_name in new_token_param_models else 'max_tokens'
+        payload[token_param] = max_tokens
+
+        # Temperature handling
+        if model_name in new_token_param_models:
+            payload['temperature'] = 1.0  # Force GPT-5 temperature
+        else:
+            payload['temperature'] = self.temp
+
+        return payload
 
 
     def send_to_server(self, payload):
